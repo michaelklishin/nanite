@@ -124,6 +124,12 @@ module Nanite
       @agent.log(*args)
     end
 
+    def environment
+      check_agent
+      @agent.environment
+    end
+    alias env environment
+
     def gensym
       values = [
         rand(0x0010000),

@@ -58,6 +58,10 @@ opts = OptionParser.new do |opts|
     options[:vhost] = vhost
   end
 
+  opts.on("-e", "--environment ENV") do |env|
+    options[:environment] = env
+  end
+
   opts.on("--version", "Show the nanite version number") do |res|
     puts "Nanite Version #{opts.version}"
     exit

@@ -1,7 +1,7 @@
 module Nanite
   class Agent
     attr_reader :identity, :format, :status_proc, :results, :root, :log_dir, :vhost, :file_root, :files, :host
-    attr_reader :default_services, :last_ping, :ping_time
+    attr_reader :default_services, :last_ping, :ping_time, :environment
 
     attr_reader :opts
 
@@ -94,6 +94,7 @@ module Nanite
       @file_root         = opts[:file_root] || "#{root}/files"
       @ping_time         = (opts[:ping_time] || 15).to_i
       @default_services  = opts[:services] || []
+      @environment       = opts[:env] || opts[:environment] || "production"
     end
 
     # Does the following (in given order):
@@ -131,7 +132,7 @@ module Nanite
           send_ping
         end
         
-        amq.queue(identity, :exclusive => true).subscribe{ |msg|
+        amq.queue("#{env_prefix}#{identity}", :exclusive => true).subscribe{ |msg|
           if opts[:threaded_actors]
             Thread.new(msg) do |msg_in_thread|
               dispatcher.handle(load_packet(msg_in_thread))
@@ -212,7 +213,20 @@ module Nanite
       @log
     end
 
+    def env_prefix
+      # when in production, do not add any prefixes
+      # backwards compatible and fairly predictable
+      # since each app is likely to use a separate vhost
+      # of AMQP broker
+      #
+      # but it is good to separate staging clusters of nanites
+      # from each other
+      return '' if Nanite.env == "production"
+      Nanite.environment
+    end
+
     protected
+
     def daemonize(log_file)
       exit if fork
       Process.setsid

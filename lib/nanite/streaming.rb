@@ -38,14 +38,14 @@ module Nanite
         file = File.open(filepath, 'rb')
         begin
           file_push = Nanite::FileStart.new(filename, dest)
-          amq.topic('file broadcast').publish(Nanite.dump_packet(file_push), :key => "nanite.filepeer.#{domain}")
+          amq.topic("file broadcast#{env_prefix}").publish(Nanite.dump_packet(file_push), :key => "nanite.filepeer.#{env_prefix}#{domain}")
           res = Nanite::FileChunk.new(file_push.token)
           while chunk = file.read(16384)
             res.chunk = chunk
-            amq.topic('file broadcast').publish(Nanite.dump_packet(res), :key => "nanite.filepeer.#{domain}")
+            amq.topic("file broadcast#{env_prefix}").publish(Nanite.dump_packet(res), :key => "nanite.filepeer.#{env_prefix}#{domain}")
           end
           fend = Nanite::FileEnd.new(file_push.token, options[:meta])
-          amq.topic('file broadcast').publish(Nanite.dump_packet(fend), :key => "nanite.filepeer.#{domain}")
+          amq.topic("file broadcast#{env_prefix}").publish(Nanite.dump_packet(fend), :key => "nanite.filepeer.#{env_prefix}#{domain}")
         ensure
           file.close
           true
@@ -91,7 +91,7 @@ module Nanite
       log.info "subscribing to file broadcasts for #{domain}"
       @files ||= {}
       callbacks[domain] = blk if blk
-      amq.queue("files#{identity}").bind(amq.topic('file broadcast'), :key => "nanite.filepeer.#{domain}").subscribe do |packet|
+      amq.queue("files#{env_prefix}#{identity}").bind(amq.topic("file broadcast#{env_prefix}"), :key => "nanite.filepeer.#{env_prefix}#{domain}").subscribe do |packet|
         case msg = load_packet(packet)
         when FileStart
           @files[msg.token] = FileState.new(msg.token, msg.dest, domain)
